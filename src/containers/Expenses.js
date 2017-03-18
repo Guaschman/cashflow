@@ -3,22 +3,62 @@ import { bindActionCreators } from 'redux';
 import * as ExpensesActions from '../actions/ExpensesActions';
 import { connect } from "react-redux";
 
+import Paper from 'material-ui/Paper';
+import { Table, TableHeader, TableHeaderColumn, TableBody, TableRow, TableRowColumn } from 'material-ui/Table';
+import {grey500} from "material-ui/styles/colors";
+
 class Expenses extends Component {
+
+    componentWillMount () {
+        this.props.actions.loadExpenses();
+        this.props.actions.setTitle("Mina inköp");
+        this.handleClick = this.handleClick.bind(this);
+    }
+
+    handleClick (arr) {
+        if (arr.length === 0) {
+            this.context.router.push("/expenses/");
+            return;
+        }
+
+        const row = this.props.expenses[arr[0]];
+        this.context.router.push("/expenses/" + row.id);
+    }
+
     render () {
-        const { expenses, actions, children } = this.props;
+        const { expenses, children } = this.props;
         return (
-            <div>
-                <h1>Expenses</h1>
+            <Paper zDepth={1}>
+                <div style={{padding: "5px 20px"}}>
+                    <Table fixedHeader={true} fixedFooter={true} selectable={true} onRowSelection={this.handleClick}>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHeaderColumn>Beskrivning</TableHeaderColumn>
+                                <TableHeaderColumn>Datum</TableHeaderColumn>
+                                <TableHeaderColumn>Delar</TableHeaderColumn>
+                                <TableHeaderColumn>Återbetalning</TableHeaderColumn>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody showRowHover={true}>
+                            {expenses.map(row => (
+                                <TableRow key={row.id} selected={false}>
+                                    <TableRowColumn><strong>{row.description}</strong></TableRowColumn>
+                                    <TableRowColumn>{row.expense_date}</TableRowColumn>
+                                    <TableRowColumn>{row.expense_parts.length} delar</TableRowColumn>
+                                    <TableRowColumn>
+                                        {row.reimbursement
+                                            ? <em>{row.reimbursement.amount} SEK ({row.reimbursement.date})</em>
+                                            : <em style={{color: grey500}}>Ej utförd</em>
+                                        }
+                                    </TableRowColumn>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
 
-                <a onClick={actions.loadExpenses}>Fetch expenses</a>
-
-                <ul>
-                    {expenses.map(e => <li>e</li>)}
-                </ul>
-
-                <hr />
-                {children}
-            </div>
+                    {children}
+                </div>
+            </Paper>
         );
     }
 }
@@ -28,9 +68,13 @@ Expenses.propTypes = {
     actions: PropTypes.object.isRequired
 };
 
+Expenses.contextTypes = {
+    router: PropTypes.object.isRequired
+};
+
 function mapStateToProps (state) {
     return {
-        expenses: state.expensesReducer
+        expenses: state.expenses
     }
 }
 

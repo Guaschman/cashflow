@@ -29,11 +29,16 @@ SECRET_KEY = os.getenv('SECRET_KEY', '-01^^veefr*f_p=phew0w7ib37_738%=lwmp9n4bl_
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = bool(os.environ.get('DEBUG', False))
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
+
+# CORS configuration
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_CREDENTIALS = True
 
 # Application definition
 
 INSTALLED_APPS = (
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -42,10 +47,12 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'expenses',
     'rest_framework',
-    'storages'
+    'storages',
+    'corsheaders'
 )
 
 MIDDLEWARE_CLASSES = (
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -90,6 +97,16 @@ DATABASES = {
     }
 }
 
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "asgi_redis.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [os.environ.get('REDIS_URL', 'redis://localhost:6379')],
+        },
+        "ROUTING": "expenses.routing.channel_routing",
+    },
+}
+
 # noinspection PyRedeclaration
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 2  # Sessions expire after 2 days
 
@@ -124,3 +141,5 @@ AWS_S3_CUSTOM_DOMAIN = "{0}.s3.amazonaws.com".format(AWS_STORAGE_BUCKET_NAME)
 MEDIAFILES_LOCATION = 'media'
 MEDIA_URL = "https://{0}/{1}/".format(AWS_S3_CUSTOM_DOMAIN, MEDIAFILES_LOCATION)
 DEFAULT_FILE_STORAGE = 'expenses.custom_storages.MediaStorage'
+
+FCM_API_KEY = os.getenv('FCM_API_KEY', 'zzzzzzz-zzzzzzzzzzzzzzzzzzzzzz')

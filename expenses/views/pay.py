@@ -1,3 +1,6 @@
+import json
+
+from datetime import date
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import JsonResponse
 from rest_framework import status
@@ -7,7 +10,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from expenses.models import Expense, Payment
+from cashflow.dauth import has_permission
+from expenses.models import Expense, Payment, Person
 
 
 # noinspection PyUnusedLocal,PyMethodMayBeStatic
@@ -16,9 +20,40 @@ class PaymentViewSet(GenericViewSet):
     permission_classes = (IsAuthenticated,)
 
     def list(self, request, **kwargs):
-        return Response({
-            'payments': [payment.to_dict() for payment in Payment.objects.filter(receiver__user=request.user)]
-        })
+        if has_permission("admin", request):
+            return Response({
+                'payments': [payment.to_dict() for payment in Payment.objects.all()]
+            })
+        else:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+
+    def create(self, request, **kwargs):
+        if has_permission("pay", request.user):
+            try:
+                json_args = json.loads(request.POST['json'])
+                total = 0
+                for exp_id in json_args['expense_ids']:
+                    total += Expense.objects.get(id=exp_id).compute_total()
+
+                payment = Payment(
+                    date=date.today(),
+                    payer=Person.objects.get(user=request.user),
+                    receiver=Expense.objects.get(id=json_args['expense_ids'][0]).owner,
+                    account_id=json_args['account_id'],
+                    sum=total
+                )
+
+                payment.save()
+
+                for exp_id in json_args['expense_ids']:
+                    exp = Expense.objects.get(id=exp_id)
+                    exp.reimbursement = payment
+                    exp.save()
+
+            except KeyError:
+                return Response(status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(status=status.HTTP_403_FORBIDDEN)
 
     def retrieve(self, request, pk, **kwargs):
         try:

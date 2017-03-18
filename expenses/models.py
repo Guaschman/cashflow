@@ -1,6 +1,11 @@
+import requests
+from channels import Group
 from django.contrib.auth.models import User as AuthUser
 from django.db import models
+from django.db.models.signals import post_init, post_save
 from django.forms.models import model_to_dict
+
+from cashflow.settings import FCM_API_KEY
 
 
 class Committee(models.Model):
@@ -100,6 +105,7 @@ class Person(models.Model):
     sorting_number = models.CharField(max_length=6, blank=True)
     bank_name = models.CharField(max_length=30, blank=True)
     default_account = models.ForeignKey(BankAccount, blank=True, null=True)
+    firebase_instance_id = models.TextField()
 
     def __str__(self):
         return self.user.first_name + " " + self.user.last_name
@@ -167,12 +173,19 @@ class Expense(models.Model):
     def __unicode__(self):
         return self.description
 
+    def compute_total(self):
+        total = 0
+        for part in self.expensepart_set.all():
+            total += part.amount
+        return total
+
     def to_dict(self):
         exp = model_to_dict(self)
         exp['expense_parts'] = [part.to_dict() for part in ExpensePart.objects.filter(expense=self)]
         exp['owner_username'] = self.owner.user.username
         exp['owner_first_name'] = self.owner.user.first_name
         exp['owner_last_name'] = self.owner.user.last_name
+        exp['reimbursement'] = self.reimbursement.to_dict()
         return exp
 
 
@@ -219,6 +232,28 @@ class ExpensePart(models.Model):
         return exp_part
 
 
+# noinspection PyUnusedLocal
+def send_notification(sender, instance, **kwargs):
+    if isinstance(instance, ExpensePart):
+        exp = instance.expense
+    else:
+        exp = instance
+    if exp.owner.firebase_instance_id is not "":
+        req = requests.post('https://fcm.googleapis.com/fcm/send', json={
+            "notification": {
+                "title": "Uppdaterat kvitto",
+                "body": "Ditt kvitto \"" + str(exp.description) + "\" har uppdaterats"
+            },
+            "to": exp.owner.firebase_instance_id
+        }, headers={
+            "Authorization": "key=" + FCM_API_KEY,
+            "Content-type": "application/json"
+        })
+
+post_save.connect(send_notification, sender=ExpensePart)
+post_save.connect(send_notification, sender=Expense)
+
+
 class Comment(models.Model):
     expense = models.ForeignKey(Expense)
     date = models.DateField()
@@ -238,3 +273,10 @@ class Comment(models.Model):
         comment['author_first_name'] = self.author.user.first_name
         comment['author_last_name'] = self.author.user.last_name
         return comment
+
+
+# noinspection PyUnusedLocal
+def comment_created(sender, instance, **kwargs):
+    Group('cashflow-expense-' + str(instance.expense.id)).send({'comment': instance.to_dict()})
+
+post_init.connect(comment_created, sender=Comment)
