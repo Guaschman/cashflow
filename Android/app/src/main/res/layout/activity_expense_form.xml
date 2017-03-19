@@ -12,6 +12,11 @@ tools:context="se.datasektionen.cashflow.ExpenseForm">
     android:layout_height="wrap_content">
 
     <!--Put form controls here-->
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Välj bild"
+        android:onClick="chooseImage"/>
     <TextView
         android:id="@+id/DescriptionTitle"
         android:layout_width="match_parent"
