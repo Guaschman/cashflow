@@ -149,10 +149,7 @@ public class ExpenseForm extends AppCompatActivity {
                 expensePartsJSONArray.put(expensePart);
             }
             createExpenseJSON.put("expense_parts",expensePartsJSONArray);
-
-            HashMap<String,String> params = new HashMap<>();
-            params.put("json", createExpenseJSON.toString());
-            APIConnection.makePostRequest(MainActivity.cashflow_domain + "api/expense/", new Response.Listener<String>() {
+            APIConnection.makeJSONPostRequest(MainActivity.cashflow_domain + "api/expense/", new Response.Listener<String>() {
                 @Override
                 public void onResponse(String response) {
                     System.out.println(response);
@@ -161,7 +158,7 @@ public class ExpenseForm extends AppCompatActivity {
                         params.put("file",getStringImage(imageBitmap));
                         try {
                             JSONObject responseJSON = new JSONObject(response);
-                            params.put("json", "{ \"expense\": " + Integer.toString(responseJSON.getJSONObject("expense").getInt("id")) + "}");
+                            params.put("expense", Integer.toString(responseJSON.getJSONObject("expense").getInt("id")));
                         } catch (JSONException e) {
                             e.printStackTrace();
                         }
@@ -174,7 +171,7 @@ public class ExpenseForm extends AppCompatActivity {
 
                     }
                 }
-            },params);
+            },createExpenseJSON);
 
         } catch (JSONException e) {
             e.printStackTrace();

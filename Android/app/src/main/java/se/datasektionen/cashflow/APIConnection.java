@@ -11,6 +11,10 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.UnsupportedEncodingException;
 import java.net.CookieHandler;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
@@ -79,6 +83,51 @@ public class APIConnection {
             @Override
             protected Map<String, String> getParams() throws AuthFailureError {
                 return params;
+            }
+        };
+        requestQueue.add(stringRequest);
+    }
+
+    static void makeJSONPostRequest(String url, Response.Listener callback, final JSONObject json) {
+
+
+        // Request a string response from the provided URL.
+        StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
+                callback, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Log.e("cashflow-API",error.toString(),error);
+                error.printStackTrace();
+            }
+        }) {
+
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                HashMap<String,String> headers = new HashMap<>();
+
+                for (HttpCookie cookie: cookieManager.getCookieStore().getCookies()) {
+                    System.out.println("CSRF-token: " + cookie + " from " + cookie.getDomain());
+                    if (cookie.getName().equals("csrftoken")) {
+                        headers.put("X-CSRFToken",cookie.getValue());
+                    }
+                }
+                System.out.println(headers);
+                return headers;
+            }
+
+            @Override
+            public String getBodyContentType() {
+                return "application/json; charset=utf-8";
+            }
+
+            @Override
+            public byte[] getBody() throws AuthFailureError {
+                try {
+                    return json.toString().getBytes("utf-8");
+                } catch (UnsupportedEncodingException e) {
+                    e.printStackTrace();
+                    return null;
+                }
             }
         };
         requestQueue.add(stringRequest);
