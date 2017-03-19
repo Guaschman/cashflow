@@ -43,6 +43,8 @@ public class ExpenseForm extends AppCompatActivity {
                         try {
                             budget = new JSONObject(response);
                             System.out.println("BUDGET: " + budget);
+                            TextView budgetTextView = (TextView)findViewById(R.id.budgetTextView);
+                            budgetTextView.setText(budget.toString(2));
                         } catch (JSONException e) {
                             Log.e("MainActivity-budget","Error when parsing: " + response, e);
                             e.printStackTrace();
@@ -71,44 +73,39 @@ public class ExpenseForm extends AppCompatActivity {
         amountInput.setInputType(InputType.TYPE_NUMBER_FLAG_DECIMAL);
         amountInput.setPadding(0,0,0,40);
         amountInput.setId(View.generateViewId());
-        expensePartIds.put("amountInput",amountInput.getId());
+        expensePartIds.put("amount",amountInput.getId());
         expensePart.addView(amountInput);
 
 
         TextView committeeDescription = new TextView(this);
-        committeeDescription.setText("Nämnd");
+        committeeDescription.setText("Välj en budgetposts id från listan");
         expensePart.addView(committeeDescription);
 
-        Spinner commiteePicker = new Spinner(this);
-        commiteePicker.setId(View.generateViewId());
-        expensePartIds.put("committee",commiteePicker.getId());
+        Spinner budgetPicker = new Spinner(this);
+        budgetPicker.setId(View.generateViewId());
+        expensePartIds.put("budget",budgetPicker.getId());
+
         try {
             JSONArray committees = budget.getJSONArray("committees");
-            String[] committeeNames = new String[committees.length()];
+            ArrayList<String> budgetIDs = new ArrayList<>();
             for (int i=0; i < committees.length(); i++) {
-                committeeNames[i] = committees.getJSONObject(i).getString("committee_name");
+                JSONArray cost_centers = committees.getJSONObject(i).getJSONArray("cost_centres");
+                for (int j=0; j < cost_centers.length(); j++) {
+                    JSONArray budget_lines = cost_centers.getJSONObject(j).getJSONArray("budget_lines");
+                    for (int k=0; k < budget_lines.length(); k++) {
+                        budgetIDs.add(Integer.toString(budget_lines.getJSONObject(k).getInt("budget_line_id")));
+                    }
+                }
             }
             ArrayAdapter<String> adapter = new ArrayAdapter<String>(getApplicationContext(),
-                    android.R.layout.simple_spinner_item, committeeNames);
-            commiteePicker.setAdapter(adapter);
+                    android.R.layout.simple_spinner_item, budgetIDs);
+            budgetPicker.setAdapter(adapter);
         } catch (JSONException e) {
             e.printStackTrace();
         }
-        commiteePicker.setBackgroundColor(Color.BLUE);
+        budgetPicker.setBackgroundColor(Color.BLUE);
 
-        commiteePicker.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                System.out.println(((TextView) view).getText());
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
-
-        expensePart.addView(commiteePicker);
+        expensePart.addView(budgetPicker);
 
         expenseParts.add(expensePartIds);
 
@@ -117,8 +114,48 @@ public class ExpenseForm extends AppCompatActivity {
     }
 
     public void sendExpense(View view) {
-        Spinner committee = (Spinner)expensePartList.findViewById(expenseParts.get(0).get("committees"));
-        System.out.println(committee.getSelectedItem().toString());
+        JSONObject createExpenseJSON = new JSONObject();
+        try {
+            createExpenseJSON.put(
+                    "description",
+                    ((EditText)findViewById(R.id.description)).getText().toString()
+            );
+
+            createExpenseJSON.put(
+                    "expense_date",
+                    ((EditText)findViewById(R.id.date)).getText().toString()
+            );
+            JSONArray expensePartsJSONArray = new JSONArray();
+            for (int i=0; i < expenseParts.size(); i++) {
+                JSONObject expensePart = new JSONObject();
+                expensePart.put(
+                        "budget_line_id",
+                        Integer.parseInt(((Spinner)findViewById(
+                                expenseParts.get(i).get("budget")
+                        )).getSelectedItem().toString())
+                );
+                expensePart.put(
+                        "amount",
+                        Integer.parseInt(((EditText)findViewById(
+                                expenseParts.get(i).get("amount")
+                        )).getText().toString())
+                );
+                expensePartsJSONArray.put(expensePart);
+            }
+            createExpenseJSON.put("expense_parts",expensePartsJSONArray);
+
+            HashMap<String,String> params = new HashMap<>();
+            params.put("json", createExpenseJSON.toString());
+            APIConnection.makePostRequest(MainActivity.cashflow_domain + "api/expense/", new Response.Listener<String>() {
+                @Override
+                public void onResponse(String response) {
+                    System.out.println(response);
+                }
+            },params);
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
     }
 
 }

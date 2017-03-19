@@ -39,7 +39,7 @@ tools:context="se.datasektionen.cashflow.ExpenseForm">
     </TextView>
 
     <EditText
-        android:id="@+id/editText"
+        android:id="@+id/date"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:ems="10"
@@ -52,7 +52,10 @@ tools:context="se.datasektionen.cashflow.ExpenseForm">
         android:layout_height="wrap_content"
         android:text="Kvittodelar"
         android:textSize="15pt"/>
-
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/budgetTextView"/>
     <LinearLayout
         android:id="@+id/ExpensePartList"
         android:layout_width="match_parent"
