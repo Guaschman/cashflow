@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Cashflow</string>
+    <string name="title_activity_expense_form">ExpenseForm</string>
 </resources>
