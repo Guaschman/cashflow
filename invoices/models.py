@@ -1,11 +1,15 @@
+from datetime import date
+
 from django.db import models
 from django.contrib.auth.models import User
-from expenses.models import *
+from django.contrib.auth.models import User
+from django.forms import model_to_dict
 
-"""
-Represents an invoice.
-"""
+
 class Invoice(models.Model):
+    """
+    Represents an invoice.
+    """
     created_date = models.DateField(auto_now_add=True)
     invoice_date = models.DateField(blank=True, null=True)
     due_date = models.DateField(blank=True, null=True)
@@ -31,7 +35,8 @@ class Invoice(models.Model):
         return str(self.to_dict())
 
     def status(self):
-        if self.verification: return "Bokförd som " + str(self.verification)
+        if self.verification:
+            return "Bokförd som " + str(self.verification)
         return "Oklart"
 
     def pay(self, user):
@@ -67,8 +72,8 @@ class Invoice(models.Model):
     def is_payable(self):
         if self.payed_at:
             return False
-        for ip in self.invoicepart_set.all(): 
-            if ip.attested_by == None: return False
+        for ip in self.invoicepart_set.all():
+            if ip.attested_by is None: return False
         return True
 
     # Returns a dict representation of the model
@@ -94,10 +99,10 @@ class Invoice(models.Model):
     # TODO
     @staticmethod
     def payable():
-        return Invoice.objects. \
-            exclude(payed_at__isnull=False). \
-            exclude(invoicepart__attested_by=None). \
-            order_by('owner__user__username')
+        return Invoice.objects \
+            .exclude(payed_at__isnull=False) \
+            .exclude(invoicepart__attested_by=None) \
+            .order_by('owner__user__username')
 
     # TODO
     @staticmethod
@@ -109,10 +114,11 @@ class Invoice(models.Model):
             invoicepart__committee_name__iregex=r'(' + '|'.join(may_account) + ')'
         ).distinct()
 
-"""
-Defines an invoice part, which is a specification of a part of an invoice.
-"""
+
 class InvoicePart(models.Model):
+    """
+    Defines an invoice part, which is a specification of a part of an invoice.
+    """
     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE)
     budget_line_id = models.IntegerField(default=0)
     budget_line_name = models.TextField(blank=True)

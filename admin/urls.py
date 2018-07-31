@@ -1,5 +1,4 @@
 from django.conf.urls import url
-from rest_framework.routers import DefaultRouter
 
 import admin.views as views
 
@@ -11,11 +10,13 @@ urlpatterns = [
     url(r'^pay/$', views.pay_overview, name='admin-pay'),
     url(r'^account/$', views.account_overview, name='admin-account'),
 
-    url(r'^expense/(?P<pk>\d+)/verification/edit/$', views.edit_expense_verification, name='admin-expense-edit-verification'),
+    url(r'^expense/(?P<pk>\d+)/verification/edit/$', views.edit_expense_verification,
+        name='admin-expense-edit-verification'),
     url(r'^expense/(?P<expense_pk>\d+)/verification/$', views.set_verification, name='admin-expense-verification'),
     url(r'^expense/(?P<pk>\d+)/confirm/$', views.confirm_expense, name='admin-expense-confirm'),
 
-    url(r'^invoice/(?P<invoice_pk>\d+)/verification/$', views.invoice_set_verification, name='admin-invoice-verification'),
+    url(r'^invoice/(?P<invoice_pk>\d+)/verification/$', views.invoice_set_verification,
+        name='admin-invoice-verification'),
 
     url(r'^expense-part/(?P<pk>\d+)/attest/$', views.attest_expense_part, name='admin-expensepart-attest'),
     url(r'^invoice-part/(?P<pk>\d+)/attest/$', views.attest_invoice_part, name='admin-invoicepart-attest'),

@@ -7,11 +7,11 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.forms.models import model_to_dict
 from django.template.loader import render_to_string
-from datetime import date, datetime
-        
+from datetime import date
+
 from cashflow import dauth
 from cashflow import settings
-from invoices.models import *
+from invoices.models import Invoice
 
 """
 
@@ -19,11 +19,12 @@ Defines all the models of the app.
 
 """
 
-"""
-BankAccount represents an actual bank account owned by the organisation.
-This is a real bank account like one on Handelsbanken or another bank.
-"""
+
 class BankAccount(models.Model):
+    """
+    BankAccount represents an actual bank account owned by the organisation.
+    This is a real bank account like one on Handelsbanken or another bank.
+    """
     name = models.TextField()
 
     # Return a string representation of the bank account
@@ -39,18 +40,17 @@ class BankAccount(models.Model):
         return model_to_dict(self)
 
 
-
-"""
-A profile is attached to each user to be able to store more information
-and relations with it.
-"""
 class Profile(models.Model):
+    """
+    A profile is attached to each user to be able to store more information
+    and relations with it.
+    """
     # The relation to the original django user
     user = models.OneToOneField(User)
 
     # Represents a bank account owned by the user
     bank_account = models.CharField(max_length=13, blank=True)
-    
+
     sorting_number = models.CharField(max_length=6, blank=True)
     bank_name = models.CharField(max_length=30, blank=True)
     default_account = models.ForeignKey(BankAccount, blank=True, null=True)
@@ -102,7 +102,7 @@ class Profile(models.Model):
         for permission in dauth.get_permissions(self.user):
             if permission.startswith("attest-"):
                 may_attest.append(permission[len("attest-"):].lower())
-        if expense_part == None:
+        if expense_part is None:
             return may_attest
         return expense_part.committee_name.lower() in may_attest
 
@@ -116,17 +116,17 @@ class Profile(models.Model):
 
     # Returns a list of the committees that the user may account for
     def may_account(self, expense=None, invoice=None):
-        if '*' in dauth.get_permissions(self.user) and (not expense == None or not invoice == None):
+        if '*' in dauth.get_permissions(self.user) and (expense is not None or invoice is not None):
             return True
 
         may_account = []
         for permission in dauth.get_permissions(self.user):
             if permission.startswith("accounting-"):
                 may_account.append(permission[len("accounting-"):].lower())
-        if expense == None and invoice == None:
+        if expense is None and invoice is None:
             return may_account
 
-        if expense != None:
+        if expense is not None:
             for ep in expense.expensepart_set.all():
                 if ep.committee_name.lower() in may_account:
                     return True
@@ -140,7 +140,8 @@ class Profile(models.Model):
         if expense.reimbursement:
             return False
 
-        if expense.owner.user.username == self.user.username: return True
+        if expense.owner.user.username == self.user.username:
+            return True
         for expense_part in expense.expensepart_set.all():
             if self.may_attest(expense_part):
                 return True
@@ -172,21 +173,23 @@ class Profile(models.Model):
 
 
 # Based of https://simpleisbetterthancomplex.com/tutorial/2016/07/22/how-to-extend-django-user-model.html#onetoone
+# noinspection PyUnusedLocal
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
         Profile.objects.create(user=instance)
 
+
+# noinspection PyUnusedLocal
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
     instance.profile.save()
 
 
-
-"""
-Represents a payment from a chapter account to a member.
-"""
 class Payment(models.Model):
+    """
+    Represents a payment from a chapter account to a member.
+    """
     date = models.DateField(auto_now_add=True)
     payer = models.ForeignKey(Profile, related_name='payer')
     receiver = models.ForeignKey(Profile, related_name='receiver')
@@ -222,12 +225,11 @@ class Payment(models.Model):
         return "Data" + str(self.id)
 
 
-
-"""
-Represents an expense. An expense contains expense parts and information 
-about the expense.
-"""
 class Expense(models.Model):
+    """
+    Represents an expense. An expense contains expense parts and information
+    about the expense.
+    """
     created_date = models.DateField(auto_now_add=True)
     expense_date = models.DateField()
     confirmed_by = models.ForeignKey(User, blank=True, null=True)
@@ -250,11 +252,16 @@ class Expense(models.Model):
         return str(self.to_dict())
 
     def status(self):
-        if self.verification: return "Bokförd som " + str(self.verification)
-        if self.reimbursement: return "Utbetald"
-        if self.is_attested() and self.confirmed_by: return "Inväntar utbetalning"
-        if self.is_attested() and not self.confirmed_by: return "Attesterad men inte i pärmen"
-        if not self.is_attested() and self.confirmed_by: return "Inte attesterad men i pärmen"
+        if self.verification:
+            return "Bokförd som " + str(self.verification)
+        if self.reimbursement:
+            return "Utbetald"
+        if self.is_attested() and self.confirmed_by:
+            return "Inväntar utbetalning"
+        if self.is_attested() and not self.confirmed_by:
+            return "Attesterad men inte i pärmen"
+        if not self.is_attested() and self.confirmed_by:
+            return "Inte attesterad men i pärmen"
         return "Inte attesterad"
 
     # Return the total amount of the expense parts
@@ -299,11 +306,11 @@ class Expense(models.Model):
 
     @staticmethod
     def payable():
-        return Expense.objects. \
-            filter(reimbursement=None). \
-            exclude(expensepart__attested_by=None). \
-            exclude(confirmed_by=None). \
-            order_by('owner__user__username')
+        return Expense.objects \
+            .filter(reimbursement=None) \
+            .exclude(expensepart__attested_by=None) \
+            .exclude(confirmed_by=None) \
+            .order_by('owner__user__username')
 
     @staticmethod
     def accountable(may_account):
@@ -314,10 +321,11 @@ class Expense(models.Model):
             expensepart__committee_name__iregex=r'(' + '|'.join(may_account) + ')'
         ).distinct()
 
-"""
-Represents a file on, for example, S3.
-"""
+
 class File(models.Model):
+    """
+    Represents a file on, for example, S3.
+    """
     expense = models.ForeignKey(Expense, on_delete=models.CASCADE, null=True, blank=True)
     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, null=True, blank=True)
     file = models.FileField()
@@ -343,11 +351,10 @@ class File(models.Model):
         return file_regex.match(self.file.name)
 
 
-
-"""
-Defines an expense part, which is a specification of a part of an expense.
-"""
 class ExpensePart(models.Model):
+    """
+    Defines an expense part, which is a specification of a part of an expense.
+    """
     expense = models.ForeignKey(Expense, on_delete=models.CASCADE)
     budget_line_id = models.IntegerField(default=0)
     budget_line_name = models.TextField(blank=True)
@@ -390,10 +397,10 @@ class ExpensePart(models.Model):
         return exp_part
 
 
-"""
-Represents a comment on an expense.
-"""
 class Comment(models.Model):
+    """
+    Represents a comment on an expense.
+    """
     expense = models.ForeignKey(Expense, on_delete=models.CASCADE, null=True, blank=True)
     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, null=True, blank=True)
     date = models.DateTimeField(auto_now_add=True)
@@ -417,7 +424,9 @@ class Comment(models.Model):
         comment['author_last_name'] = self.author.user.last_name
         return comment
 
+
 # Sends mail on comment
+# noinspection PyUnusedLocal
 @receiver(post_save, sender=Comment)
 def send_mail(sender, instance, created, *args, **kwargs):
     owner = instance.expense.owner if instance.expense else instance.invoice.owner

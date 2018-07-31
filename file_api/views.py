@@ -1,16 +1,9 @@
-from django.shortcuts import render
-from django.http import Http404, HttpResponseRedirect, HttpResponseBadRequest, HttpResponseForbidden, HttpResponseServerError, JsonResponse
-from django.views.decorators.http import require_http_methods, require_GET, require_POST
+from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.decorators import login_required, user_passes_test
-from datetime import date, datetime
-from django.urls import reverse
-from django.core.exceptions import ObjectDoesNotExist
+from django.views.decorators.http import require_http_methods
 
-import re
-
-from expenses.models import File
 from expenses.models import Expense
+from expenses.models import File
 
 
 def pretty_request(request):
@@ -26,13 +19,13 @@ def pretty_request(request):
         'Content-Length: {content_length}\n'
         'Content-Type: {content_type}\n'
         '{headers}\n\n'
-        #'{body}'
+        # '{body}'
     ).format(
         method=request.method,
         content_length=request.META['CONTENT_LENGTH'],
         content_type=request.META['CONTENT_TYPE'],
         headers=headers,
-        #body=request.body,
+        # body=request.body,
     )
 
 
@@ -40,12 +33,12 @@ def pretty_request(request):
 @csrf_exempt
 def new_file(request):
     if len((request.FILES.getlist('files'))) < 1:
-        return JsonResponse({'message':'No file specified.','explanation':'Upload at least one file.'}, status=400)
+        return JsonResponse({'message': 'No file specified.', 'explanation': 'Upload at least one file.'}, status=400)
 
-    eId = int(request.GET.get('expense', '0'))
+    expense_id = int(request.GET.get('expense', '0'))
     expense = None
-    if eId > 0:
-        expense = Expense.objects.get(pk=eId)
+    if expense_id > 0:
+        expense = Expense.objects.get(pk=expense_id)
 
     # Upload the file
     files = []
@@ -57,15 +50,16 @@ def new_file(request):
 
     print(files)
 
-    return JsonResponse({'message':'File uploaded.', 'files':[file.to_dict() for file in files]})
+    return JsonResponse({'message': 'File uploaded.', 'files': [file.to_dict() for file in files]})
+
 
 @require_http_methods(["POST"])
 @csrf_exempt
 def delete_file(request, pk):
     file = File.objects.get(pk=int(pk))
-    if not file.expense == None and not request.user.profile.may_delete(file.expense): 
+    if file.expense is not None and not request.user.profile.may_delete(file.expense):
         return JsonResponse({'Du har inte behörighet att ta bort denna bild.'}, 403)
     file.expense = None
     file.save()
 
-    return JsonResponse({'message':'File deleted.'})
+    return JsonResponse({'message': 'File deleted.'})
