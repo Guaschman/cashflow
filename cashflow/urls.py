@@ -20,6 +20,8 @@ from cashflow import settings
 from expenses import views
 from .authviews import login, login_with_token, logout
 
+from django.views.static import serve
+
 urlpatterns = [
     url(r'^$', views.index, name='expenses-index'),
     url(r'^login/$', login, name='login'),
@@ -31,4 +33,7 @@ urlpatterns = [
     url(r'^invoices/', include("invoices.urls")),
     url(r'^users/', include("users.urls")),
     url(r'^api/files/', include("file_api.urls")),
+    url(r'^media/(?P<path>.*)$', serve, {
+            'document_root': settings.MEDIA_ROOT,
+    }),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

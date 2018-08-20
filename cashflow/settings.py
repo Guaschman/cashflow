@@ -156,7 +156,7 @@ AUTH_API_KEY = os.getenv('LOGIN2_KEY', 'key-012345678910111213141516171819')
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.8/howto/static-files/
-STATIC_ROOT = os.path.join(PROJECT_ROOT, 'static')
+STATIC_ROOT = os.path.join(PROJECT_ROOT, 'staticfiles')
 STATIC_URL = '/static/'
 
 # Extra places for collectstatic to find static files.
@@ -172,8 +172,12 @@ AWS_S3_HOST = os.getenv('S3_HOST', 's3.eu-central-1.amazonaws.com')
 AWS_S3_CUSTOM_DOMAIN = "{0}.s3.amazonaws.com".format(AWS_STORAGE_BUCKET_NAME)
 
 MEDIAFILES_LOCATION = 'media'
-MEDIA_URL = "https://{0}/{1}/".format(AWS_S3_CUSTOM_DOMAIN, MEDIAFILES_LOCATION)
-DEFAULT_FILE_STORAGE = 'expenses.custom_storages.MediaStorage'
+# comment out if not using S3.
+#MEDIA_URL = "https://{0}/{1}/".format(AWS_S3_CUSTOM_DOMAIN, MEDIAFILES_LOCATION)
+#DEFAULT_FILE_STORAGE = 'expenses.custom_storages.MediaStorage'
+MEDIA_ROOT = "~/programming/cashflow/media"
+MEDIA_URL = "/media/"
+
 
 SPAM_API_KEY = os.getenv('SPAM_API_KEY', 'Lobster Thermidor au Crevette with a Mornay sauce garnished with truffle '
                                          'pate, brandy and with a fried egg on top and spam.')
